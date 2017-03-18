@@ -3,7 +3,9 @@ var request = require('request');
 var cheerio = require('cheerio');
 var sendmail = require('sendmail')();
 var CronJob = require('cron').CronJob;
+var fs = require('fs');
 var app     = express();
+var http = require('http'); //importing http
 
 app.set('port', (process.env.PORT || 5000));
 
@@ -63,9 +65,21 @@ function ScrapeAndSend(){
   })
 }
 
+
+
+
 //Sends the text via email using smp gateways provided by cell providers
 function SendText(json){
-  console.log(json.length);
+  var oldquotes = require('./oldQuotes.json');
+
+  for(var i = 0; i < json.length; i++){
+    oldquotes.forEach(function(element2){
+      if(json[i].quote == element2.quote){
+        json.splice(i,1);
+      }
+    },this);
+  }
+
   var ranNum = Math.floor(Math.random() * (json.length - 1));
 
   var textBody = 'Rap quote of the day: "' + json[ranNum].quote + '"  - ' + json[ranNum].quotee;
@@ -78,12 +92,18 @@ function SendText(json){
   arrayOfText.forEach(function(element) {
     sendmail({
       from: 'RapQuoteOfTheDay@pimpin.com',
-      to: '[Your phone number here]', 
+      to: '[You number with gateway here]', 
       html: element,
     }, function(err, reply) {
       console.log(err && err.stack);
     });
   }, this);
+  
+  oldquotes.push({ quote: json[ranNum].quote,
+                  quotee: json[ranNum].quotee})
+   
+  fs.writeFile('oldQuotes.json', JSON.stringify(oldquotes, null, 4), function(err){
+  })
 
   console.log('text sent');
 }
